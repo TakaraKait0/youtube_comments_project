@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Comments</title>
+    <style>
+        #comments-container {
+            overflow-y: auto;
+            height: 500px; /* 表示されるコメントの高さを調整 */
+            border: 1px solid #ccc;
+            display: flex;
+            flex-direction: column-reverse; /* コメントを逆順に表示する */
+        }
+
+        .comment {
+            opacity: 0;
+            transform: translateY(100%); /* 下から上にスライドアップする初期位置 */
+            /*animation: slide-up 0.5s ease-out; /* コメントのスライドアップアニメーション */
+            margin: 0; /* 余分なマージンを除去 */
+        }
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(100%); /* 下から上への移動開始位置 */
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0); /* 上までスライドアップ */
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="comments-container"></div>
+
+    <script>
+        var i = 0;
+        function addComment() {
+            var newComment = document.createElement('div');
+            newComment.className = 'comment';
+            newComment.textContent = 'Comment ' + i;
+
+            var commentsContainer = document.getElementById('comments-container');
+            commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
+
+            // 不透明度を設定してコメントが追加されたときにアニメーションが開始
+            setTimeout(function() {
+                newComment.style.opacity = 1;
+            }, 0);
+
+            i += 1;
+        }
+
+        setInterval(addComment, 500); // 0.5秒ごとにaddComment関数を呼び出す
+    </script>
+</body>
+</html>
