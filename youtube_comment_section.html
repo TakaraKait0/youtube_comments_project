@@ -1,59 +1,161 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Comments</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Chalkduster">
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Chalkduster';
+            background-color: #f2f2f2;
+        }
+
         #comments-container {
             overflow-y: auto;
-            height: 500px; /* 表示されるコメントの高さを調整 */
+            height: 500px;
             border: 1px solid #ccc;
             display: flex;
-            flex-direction: column-reverse; /* コメントを逆順に表示する */
+            flex-direction: column-reverse;
+            background-color: #006400;
+            color: white;
+            padding: 10px;
         }
 
         .comment {
             opacity: 0;
-            transform: translateY(100%); /* 下から上にスライドアップする初期位置 */
-            /*animation: slide-up 0.5s ease-out; /* コメントのスライドアップアニメーション */
-            margin: 0; /* 余分なマージンを除去 */
+            transform: translateY(100%);
+            margin: 0;
+            background-color: #006400;
+            color: white;
+            font-size: 20px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            transition: opacity 0.5s ease;
         }
 
-        @keyframes slide-up {
-            from {
-                transform: translateY(100%); /* 下から上への移動開始位置 */
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0); /* 上までスライドアップ */
-                opacity: 1;
-            }
+        .comment.anonymous-comment {
+            color: #ffff00;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        }
+
+        #comment-input {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: row;
+            width: 80%;
+            padding: 10px;
+        }
+
+        #name-input {
+            width: 30%;
+            margin-right: 10px;
+            padding: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        #comment-text {
+            width: 70%;
+            margin-right: 10px;
+            padding: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        #anonymous-checkbox {
+            margin-top: 0px;
+            transform: scale(2);
+        }
+
+        #anonymous-checkbox + label {
+            margin-left: 15px;
+            font-size: 16px;
+        }
+
+        #submit-button {
+            background-color: #006400;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-right: 0px;
+            margin-left: 15px;
         }
     </style>
 </head>
 <body>
     <div id="comments-container"></div>
 
+    <div id="comment-input">
+        <input type="text" id="name-input" placeholder="出席番号を入力してください">
+        <input type="text" id="comment-text" placeholder="コメントを入力してください" onkeydown="handleEnter(event)">
+        <input type="checkbox" id="anonymous-checkbox" />
+        <label for="anonymous-checkbox">質問</label>
+        <button id="submit-button" onclick="submitComment()">送信</button>
+    </div>
+
     <script>
-        var i = 0;
-        function addComment() {
-            var newComment = document.createElement('div');
-            newComment.className = 'comment';
-            newComment.textContent = 'Comment ' + i;
-
-            var commentsContainer = document.getElementById('comments-container');
-            commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
-
-            // 不透明度を設定してコメントが追加されたときにアニメーションが開始
-            setTimeout(function() {
-                newComment.style.opacity = 1;
-            }, 0);
-
-            i += 1;
+        var previousComment = "";
+        function writeToGoogleDocs(name, comment, isAnonymous) {
+            google.script.run.withSuccessHandler(addComment).writeToGoogleDocs(name, comment, isAnonymous);
         }
 
-        setInterval(addComment, 500); // 0.5秒ごとにaddComment関数を呼び出す
+        function fetchDisplayComments() {
+          google.script.run.withSuccessHandler(addComment).getLatestComment();
+        }
+
+        var i = 0;
+        function addComment(comment) {
+            if (previousComment !== comment) {
+              previousComment = comment;
+              var newComment = document.createElement('div');
+              newComment.className = 'comment';
+              if (comment.includes("質問")) {
+                  newComment.className += ' anonymous-comment';
+              }
+              var commentText = comment.split(" : ")[1];
+              newComment.textContent = commentText;
+              newComment.style.fontSize = '40px';
+              newComment.style.fontWeight = 'bold';
+
+              var commentsContainer = document.getElementById('comments-container');
+              commentsContainer.insertBefore(newComment, commentsContainer.firstChild);
+
+              // 不透明度を設定してコメントが追加されたときにアニメーションが開始
+              setTimeout(function() {
+                newComment.style.opacity = 1;
+                }, 0);
+
+              i += 1;
+              setTimeout(function() {fetchDisplayComments();}, 10);  // 0.01秒ごとにfetchDisplayComments関数を呼び出す
+            }
+        }
+
+        if (previousComment === "") {
+          setInterval(function() {fetchDisplayComments();}, 100);  // 0.1秒ごとにfetchDisplayComments関数を呼び出す
+        }
+
+        function submitComment() {
+            var nameText = document.getElementById('name-input').value;
+            var commentText = document.getElementById('comment-text').value;
+            var isAnonymous = document.getElementById('anonymous-checkbox').checked;
+
+            if (commentText.trim() !== "") {
+                writeToGoogleDocs(nameText, commentText, isAnonymous);
+                document.getElementById('comment-text').value = "";
+                document.getElementById('anonymous-checkbox').checked = false; // チェックボックスのチェックを外す
+            }
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                submitComment();
+            }
+        }
     </script>
 </body>
 </html>
